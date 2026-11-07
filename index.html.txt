@@ -1,0 +1,219 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Student Message dApp</title>
+
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.5/dist/ethers.umd.min.js"></script>
+
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #e9edf5;
+    margin: 0;
+    padding: 40px 15px;
+}
+
+.container {
+    max-width: 650px;
+    margin: auto;
+    background: white;
+    padding: 35px;
+    border-radius: 15px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+}
+
+h1 {
+    text-align: center;
+    color: #273653;
+}
+
+h2 {
+    color: #344767;
+}
+
+button {
+    background: #344767;
+    color: white;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 7px;
+    margin: 6px;
+    cursor: pointer;
+}
+
+input {
+    width: 90%;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    margin: 10px 0;
+}
+
+p {
+    overflow-wrap: anywhere;
+    line-height: 1.6;
+}
+
+hr {
+    margin: 25px 0;
+}
+
+img {
+    display: block;
+    margin: 20px auto;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>Student Message dApp</h1>
+
+<p>A decentralized application built on Ethereum Sepolia.</p>
+
+<h2>Connect Wallet</h2>
+<button onclick="connectWallet()">Connect MetaMask</button>
+<p id="wallet">Wallet not connected</p>
+
+<hr>
+
+<h2>Store Your Message</h2>
+
+<input id="messageInput" placeholder="Enter your message">
+
+<br>
+
+<button onclick="saveMessage()">Save Message</button>
+<button onclick="readMessage()">Read Message</button>
+
+<h3>Current Message:</h3>
+<p id="currentMessage">No message loaded.</p>
+
+<h3>Transaction Result:</h3>
+<p id="result">No transaction yet.</p>
+
+<hr>
+
+<h2>About This Project</h2>
+
+<ul>
+<li>Solidity Smart Contract</li>
+<li>MetaMask Wallet</li>
+<li>Ethereum Sepolia Testnet</li>
+<li>JavaScript and ethers.js</li>
+</ul>
+
+<a href="https://ethereum.org/" target="_blank">Learn About Ethereum</a>
+
+<img src="https://upload.wikimedia.org/wikipedia/commons/0/05/Ethereum_logo_2014.svg"
+alt="Ethereum Logo" width="100">
+
+</div>
+
+<script>
+
+const contractAddress = "0x80396aD5F3d2a234691e191944d0D903F16bD4C8";
+
+const abi = [
+    "function setMessage(string)",
+    "function getMessage() view returns (string)",
+    "function getOwner() view returns (address)",
+    "function clearMessage()"
+];
+
+let contract;
+
+async function connectWallet() {
+    try {
+        if (!window.ethereum) {
+            alert("Please install MetaMask");
+            return;
+        }
+
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
+
+        const network = await provider.getNetwork();
+
+        if (network.chainId !== 11155111n) {
+            alert("Please switch to Sepolia");
+            return;
+        }
+
+        const signer = await provider.getSigner();
+
+        contract = new ethers.Contract(
+            contractAddress, abi, signer
+        );
+
+        document.getElementById("wallet").innerText =
+            "Connected: " + await signer.getAddress();
+
+    } catch (error) {
+        console.error(error);
+        alert("Wallet connection failed");
+    }
+}
+
+async function readMessage() {
+    try {
+        if (!contract) {
+            alert("Connect your wallet first");
+            return;
+        }
+
+        const message = await contract.getMessage();
+
+        document.getElementById("currentMessage").innerText = message;
+
+    } catch (error) {
+        console.error(error);
+        alert("Could not read message");
+    }
+}
+
+async function saveMessage() {
+    try {
+        if (!contract) {
+            alert("Connect your wallet first");
+            return;
+        }
+
+        const message = document.getElementById("messageInput").value;
+
+        if (!message.trim()) {
+            alert("Enter a message first");
+            return;
+        }
+
+        document.getElementById("result").innerText =
+            "Waiting for confirmation...";
+
+        const tx = await contract.setMessage(message);
+
+        document.getElementById("result").innerText =
+            "Transaction: " + tx.hash;
+
+        await tx.wait();
+
+        document.getElementById("result").innerText =
+            "Transaction confirmed!";
+
+        await readMessage();
+
+    } catch (error) {
+        console.error(error);
+        document.getElementById("result").innerText =
+            "Transaction failed or rejected";
+    }
+}
+
+</script>
+
+</body>
+</html>
